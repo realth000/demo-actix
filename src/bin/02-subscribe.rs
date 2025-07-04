@@ -1,3 +1,16 @@
+//! This example illustrates a little complex usecase where multiple subscriber
+//! subsribes to the same worker. The worker, we call it notifier, receives
+//! subscription and [`Ship`] events then produce [`ShipCallbackEvent`] back to
+//! subscribers to notify them.
+//!
+//!
+//! Subscribe:
+//!
+//! Subscriber -> Notifier.
+//!
+//! Notify:
+//!
+//! Event -> Notifier -> Subscriber.
 #![allow(unused_variables)]
 use actix::prelude::*;
 
@@ -106,9 +119,10 @@ async fn main() -> Result<(), actix::MailboxError> {
     let email_sub = EmailSubscriber {}.start();
     let sms_sub = SmsSubscriber {}.start();
 
-    // Notifier is the status here.
+    // Notifier.
     let notifier = OrderNotifier::new().start();
 
+    // Subscribe for different subscribers.
     notifier
         .send(Subscribe {
             source: email_sub.recipient(),
@@ -121,6 +135,8 @@ async fn main() -> Result<(), actix::MailboxError> {
             name: "I am sms subscriber, I want to subscribe",
         })
         .await?;
+
+    // Run the process.
     notifier.send(Ship(1)).await?;
     notifier.send(Ship(2)).await?;
 
